@@ -7,6 +7,7 @@ import { StatusBadge } from "../../components/admin/common/StatusBadge";
 import { Pagination } from "../../components/admin/common/Pagination";
 import { ImageUpload } from "../../components/admin/common/ImageUpload";
 import { RichTextRenderer } from "../../components/common/RichTextRenderer";
+import { RichTextEditor } from "../../components/editor/RichTextEditor";
 
 export const AdminBlogs: React.FC = () => {
   const [blogs, setBlogs] = useState<Blog[]>([]);
@@ -35,9 +36,6 @@ export const AdminBlogs: React.FC = () => {
   const [seoDescription, setSeoDescription] = useState("");
   const [saving, setSaving] = useState(false);
   const [editorTab, setEditorTab] = useState<"write" | "preview">("write");
-
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const inlineImageInputRef = useRef<HTMLInputElement>(null);
 
   const fetchBlogs = async (page = 1) => {
     setLoading(true);
@@ -95,42 +93,6 @@ export const AdminBlogs: React.FC = () => {
     }
     setEditorTab("write");
     setModalOpen(true);
-  };
-
-  // Editor Toolbar Helpers
-  const insertFormatting = (prefix: string, suffix: string = "", placeholder: string = "") => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = textarea.value.substring(start, end) || placeholder;
-
-    const before = textarea.value.substring(0, start);
-    const after = textarea.value.substring(end);
-
-    const newContent = `${before}${prefix}${selectedText}${suffix}${after}`;
-    setContent(newContent);
-
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + prefix.length, start + prefix.length + selectedText.length);
-    }, 0);
-  };
-
-  const handleInlineImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || !e.target.files[0]) return;
-    const file = e.target.files[0];
-    const defaultAlt = file.name.split(".")[0].replace(/[-_]/g, " ");
-    const altText = window.prompt("Enter Image Alt Text / Description (Recommended for SEO):", defaultAlt);
-    if (altText === null) return; // User cancelled
-
-    try {
-      const res = await adminApi.uploadMedia(file, "blogs");
-      insertFormatting(`\n![${altText.trim() || defaultAlt}](${res.url})\n`, "", "");
-    } catch (err: any) {
-      alert("Failed to upload image: " + err.message);
-    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -467,130 +429,17 @@ export const AdminBlogs: React.FC = () => {
                   </div>
 
                   {editorTab === "write" ? (
-                    <div className="border rounded-2xl overflow-hidden shadow-xs">
-                      {/* Editor Toolbar */}
-                      <div className="flex flex-wrap items-center gap-1.5 p-2 bg-neutral-50 border-b text-neutral-700">
-                        <button
-                          type="button"
-                          onClick={() => insertFormatting("**", "**", "bold text")}
-                          className="px-2.5 py-1 text-xs font-bold bg-white hover:bg-neutral-100 border rounded shadow-2xs"
-                          title="Bold"
-                        >
-                          B
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => insertFormatting("*", "*", "italic text")}
-                          className="px-2.5 py-1 text-xs italic font-serif bg-white hover:bg-neutral-100 border rounded shadow-2xs"
-                          title="Italic"
-                        >
-                          I
-                        </button>
-                        <span className="h-4 w-px bg-neutral-300 mx-1" />
-                        <button
-                          type="button"
-                          onClick={() => insertFormatting("## ", "\n", "Heading 2")}
-                          className="px-2 py-1 text-xs font-semibold bg-white hover:bg-neutral-100 border rounded"
-                        >
-                          H2
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => insertFormatting("### ", "\n", "Heading 3")}
-                          className="px-2 py-1 text-xs font-semibold bg-white hover:bg-neutral-100 border rounded"
-                        >
-                          H3
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => insertFormatting("#### ", "\n", "Heading 4")}
-                          className="px-2 py-1 text-xs font-semibold bg-white hover:bg-neutral-100 border rounded"
-                        >
-                          H4
-                        </button>
-                        <span className="h-4 w-px bg-neutral-300 mx-1" />
-                        <button
-                          type="button"
-                          onClick={() => insertFormatting("> ", "\n", "Quote")}
-                          className="px-2 py-1 text-xs bg-white hover:bg-neutral-100 border rounded"
-                          title="Blockquote"
-                        >
-                          &ldquo; Quote
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => insertFormatting("- ", "\n", "List item")}
-                          className="px-2 py-1 text-xs bg-white hover:bg-neutral-100 border rounded"
-                          title="Bullet list"
-                        >
-                          • List
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => insertFormatting("1. ", "\n", "First item")}
-                          className="px-2 py-1 text-xs bg-white hover:bg-neutral-100 border rounded"
-                          title="Numbered list"
-                        >
-                          1. List
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => insertFormatting("[", "](https://...)", "Link text")}
-                          className="px-2 py-1 text-xs bg-white hover:bg-neutral-100 border rounded"
-                          title="Insert link"
-                        >
-                          🔗 Link
-                        </button>
-                        <span className="h-4 w-px bg-neutral-300 mx-1" />
-
-                        {/* Direct PC Image Insertion with Alt Text Prompt */}
-                        <button
-                          type="button"
-                          onClick={() => inlineImageInputRef.current?.click()}
-                          className="px-2.5 py-1 text-xs font-semibold bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded flex items-center gap-1 cursor-pointer"
-                          title="Upload image from PC and insert with Alt Text"
-                        >
-                          🖼️ Insert Photo (with Alt Text)
-                        </button>
-                        <input
-                          ref={inlineImageInputRef}
-                          type="file"
-                          accept="image/*"
-                          onChange={handleInlineImageUpload}
-                          className="hidden"
-                        />
-
-                        {/* Custom Image URL with Alt Text */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const url = window.prompt("Enter Image URL (e.g. https://example.com/photo.jpg):");
-                            if (!url) return;
-                            const alt = window.prompt("Enter Image Alt Text (SEO description):", "Article graphic");
-                            insertFormatting(`\n![${(alt || "Image").trim()}](${url.trim()})\n`, "", "");
-                          }}
-                          className="px-2 py-1 text-xs font-semibold bg-white hover:bg-neutral-100 text-neutral-700 border rounded flex items-center gap-1 cursor-pointer"
-                          title="Insert image by URL with Alt Text"
-                        >
-                          🌐 Image URL + Alt
-                        </button>
-                      </div>
-
-                      {/* Textarea */}
-                      <textarea
-                        ref={textareaRef}
-                        required
-                        rows={12}
-                        placeholder="Write your article in markdown or formatted text..."
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        className="w-full p-4 text-sm font-mono leading-relaxed outline-none resize-y"
-                      />
-                    </div>
+                    <RichTextEditor
+                      content={content}
+                      onChange={setContent}
+                      placeholder="Write your article with rich formatting, headings, tables, images, and embedded videos..."
+                      folder="blogs"
+                      minHeight="420px"
+                    />
                   ) : (
-                    <div className="border rounded-2xl p-6 bg-neutral-50 min-h-[300px] text-sm leading-relaxed overflow-y-auto max-h-[400px]">
+                    <div className="border border-neutral-200 rounded-2xl p-6 bg-neutral-50 min-h-[300px] text-sm leading-relaxed overflow-y-auto max-h-[500px]">
                       {content ? (
-                        <RichTextRenderer content={content} className="prose prose-neutral max-w-none" />
+                        <RichTextRenderer content={content} className="max-w-none" />
                       ) : (
                         <p className="text-neutral-400 italic">No content written yet.</p>
                       )}

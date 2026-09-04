@@ -8,6 +8,7 @@ import { Pagination } from "../../components/admin/common/Pagination";
 import { ImageUpload } from "../../components/admin/common/ImageUpload";
 import { money, resolveImageUrl } from "../../utils/store";
 import { RichTextRenderer } from "../../components/common/RichTextRenderer";
+import { RichTextEditor } from "../../components/editor/RichTextEditor";
 
 interface UIVariantItem {
   id?: number;
@@ -73,8 +74,6 @@ export const AdminProducts: React.FC = () => {
 
   // Rich Description Editor State
   const [descEditorTab, setDescEditorTab] = useState<"write" | "preview">("write");
-  const descTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const inlineProductImageInputRef = useRef<HTMLInputElement>(null);
 
   const fetchData = async (page = 1) => {
     setLoading(true);
@@ -454,41 +453,6 @@ export const AdminProducts: React.FC = () => {
     };
 
     setSchemaMarkup(JSON.stringify(schema, null, 2));
-  };
-
-  const insertDescFormatting = (prefix: string, suffix: string = "", placeholder: string = "") => {
-    const textarea = descTextareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = textarea.value.substring(start, end) || placeholder;
-
-    const before = textarea.value.substring(0, start);
-    const after = textarea.value.substring(end);
-
-    const newContent = `${before}${prefix}${selectedText}${suffix}${after}`;
-    setDesc(newContent);
-
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + prefix.length, start + prefix.length + selectedText.length);
-    }, 0);
-  };
-
-  const handleInlineProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || !e.target.files[0]) return;
-    const file = e.target.files[0];
-    const defaultAlt = file.name.split(".")[0].replace(/[-_]/g, " ");
-    const altText = window.prompt("Enter Image Alt Text / Description (Recommended for SEO):", defaultAlt);
-    if (altText === null) return;
-
-    try {
-      const res = await adminApi.uploadMedia(file, "products");
-      insertDescFormatting(`\n![${altText.trim() || defaultAlt}](${res.url})\n`, "", "");
-    } catch (err: any) {
-      alert("Failed to upload image: " + err.message);
-    }
   };
 
   const handleSaveProduct = async (e: React.FormEvent) => {
@@ -1221,95 +1185,17 @@ export const AdminProducts: React.FC = () => {
                   </div>
 
                   {descEditorTab === "write" ? (
-                    <div className="border rounded-xl overflow-hidden">
-                      <div className="flex flex-wrap items-center gap-1 p-1.5 bg-neutral-50 border-b text-neutral-700">
-                        <button
-                          type="button"
-                          onClick={() => insertDescFormatting("**", "**", "bold text")}
-                          className="px-2 py-0.5 text-xs font-bold bg-white hover:bg-neutral-100 border rounded cursor-pointer"
-                          title="Bold"
-                        >
-                          B
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => insertDescFormatting("*", "*", "italic text")}
-                          className="px-2 py-0.5 text-xs italic font-serif bg-white hover:bg-neutral-100 border rounded cursor-pointer"
-                          title="Italic"
-                        >
-                          I
-                        </button>
-                        <span className="h-3.5 w-px bg-neutral-300 mx-0.5" />
-                        <button
-                          type="button"
-                          onClick={() => insertDescFormatting("## ", "\n", "Heading 2")}
-                          className="px-1.5 py-0.5 text-[11px] font-semibold bg-white hover:bg-neutral-100 border rounded cursor-pointer"
-                        >
-                          H2
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => insertDescFormatting("### ", "\n", "Heading 3")}
-                          className="px-1.5 py-0.5 text-[11px] font-semibold bg-white hover:bg-neutral-100 border rounded cursor-pointer"
-                        >
-                          H3
-                        </button>
-                        <span className="h-3.5 w-px bg-neutral-300 mx-0.5" />
-                        <button
-                          type="button"
-                          onClick={() => insertDescFormatting("> ", "\n", "Highlight quote")}
-                          className="px-1.5 py-0.5 text-[11px] bg-white hover:bg-neutral-100 border rounded cursor-pointer"
-                          title="Blockquote"
-                        >
-                          &ldquo; Quote
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => insertDescFormatting("- ", "\n", "Feature item")}
-                          className="px-1.5 py-0.5 text-[11px] bg-white hover:bg-neutral-100 border rounded cursor-pointer"
-                          title="Bullet list"
-                        >
-                          • List
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => insertDescFormatting("[", "](https://...)", "Link text")}
-                          className="px-1.5 py-0.5 text-[11px] bg-white hover:bg-neutral-100 border rounded cursor-pointer"
-                          title="Insert link"
-                        >
-                          🔗 Link
-                        </button>
-                        <span className="h-3.5 w-px bg-neutral-300 mx-0.5" />
-                        <button
-                          type="button"
-                          onClick={() => inlineProductImageInputRef.current?.click()}
-                          className="px-2 py-0.5 text-[11px] font-semibold bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded flex items-center gap-1 cursor-pointer"
-                          title="Upload image from PC and insert with Alt Text"
-                        >
-                          🖼️ Insert Photo
-                        </button>
-                        <input
-                          ref={inlineProductImageInputRef}
-                          type="file"
-                          accept="image/*"
-                          onChange={handleInlineProductImageUpload}
-                          className="hidden"
-                        />
-                      </div>
-
-                      <textarea
-                        ref={descTextareaRef}
-                        rows={7}
-                        value={desc}
-                        onChange={(e) => setDesc(e.target.value)}
-                        placeholder="Write formatted product specifications, highlights, compatibility..."
-                        className="w-full p-3 font-mono text-xs leading-relaxed outline-none resize-y"
-                      />
-                    </div>
+                    <RichTextEditor
+                      content={desc}
+                      onChange={setDesc}
+                      placeholder="Write full product description, technical specifications, warranty, features..."
+                      folder="products"
+                      minHeight="280px"
+                    />
                   ) : (
-                    <div className="border rounded-xl p-4 bg-neutral-50 min-h-[140px] text-xs leading-relaxed overflow-y-auto max-h-[260px]">
+                    <div className="border border-neutral-200 rounded-xl p-4 bg-neutral-50 min-h-[140px] text-xs leading-relaxed overflow-y-auto max-h-[350px]">
                       {desc ? (
-                        <RichTextRenderer content={desc} className="prose prose-neutral max-w-none text-xs" />
+                        <RichTextRenderer content={desc} className="max-w-none text-xs" />
                       ) : (
                         <p className="text-neutral-400 italic">No description added yet.</p>
                       )}
